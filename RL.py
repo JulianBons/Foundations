@@ -143,6 +143,14 @@ class ReinforcementLearning:
         """
         self.env.env_plot()
         pass
+    
+    
+    def rl_change_epislon(self, epsilon):
+        """
+        Changes the amount of exploration the agent does.
+        """
+        self.agent.epsilon = epsilon
+        pass
 
     
     

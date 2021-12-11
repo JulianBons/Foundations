@@ -5,17 +5,11 @@ import matplotlib.pyplot as plt
 
 
 def argmax(q_values):
-    max_val = -np.inf
-    max_ind = []
-    
-    for i, value in enumerate(q_values):
-        if value > max_val:
-            max_val = value
-            max_ind = [i]
-        if value == max_val:
-            max_ind.append(i)
-
-    return np.random.choice(max_ind)
+    """
+    Returns the action with the highest q-value. 
+    If multiple values share the highest value, randomly sample one. 
+    """
+    return np.random.choice(np.flatnonzero(q_values == q_values.max()))
 
 
 def onehot(num_states, state):
