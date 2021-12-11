@@ -145,17 +145,40 @@ class ReinforcementLearning:
         pass
     
     
-    def rl_change_epislon(self, epsilon):
+    def rl_change_epsilon(self, epsilon):
         """
-        Changes the amount of exploration the agent does.
+        Changes the epsilon parameter of the agent. 
+        If set to 1, the agent will employ a random policy. 
         """
         self.agent.epsilon = epsilon
         pass
-
     
     
-    
-    
-    
-
-
+    def rl_explore_env(self, num_steps):
+        """
+        Explore the maze with no task and no rewards
+        """
+        #Store old values
+        old_epsilon = self.agent.epsilon
+        old_reward_states = [utils.ndarray_to_matrix(state, self.env.width) for state in self.env.reward_states]
+        old_rewards = self.env.rewards
+     
+        #Use a random policy
+        self.rl_change_epsilon(1)
+        #Delete the task
+        self.rl_change_task(reward_states=[], rewards=[])
+        
+        #Start the interaction
+        reward, state, action, _ = self.rl_start()
+        
+        #Explore the maze
+        for step in range(num_steps):
+            reward, state, action, _ = self.rl_step(reward, state, action)
+            
+        
+        #Reset the parameters
+        self.rl_change_epsilon(old_epsilon)
+        self.rl_change_task(reward_states=old_reward_states, rewards=old_rewards)
+        
+        
+        pass
