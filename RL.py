@@ -70,17 +70,26 @@ class ReinforcementLearning:
         return (reward, state, action, termination)
 
     
-    def rl_step(self, reward, state, action):
+    def rl_step(self, reward, last_state, action):
         """
         Observe the effect of the interaction.
         """
         #Interaction
         (reward, state, termination) = self.env.env_step(action)
+        
+        
+        ####TO DO#####
+        #Store last_state, action, state in self.memory of agent
+        #Call agent.replay   
+        
         action = self.agent.agent_step(reward, state)
         
         #Track the changes
         self.num_steps += 1
         self.trajectory.append(state)
+        
+        
+        
         
         return (reward, state, action, termination)
         
@@ -151,6 +160,13 @@ class ReinforcementLearning:
         If set to 1, the agent will employ a random policy. 
         """
         self.agent.epsilon = epsilon
+        pass
+    
+    def rl_change_values(self, state, value):
+        """
+        To simulate revaluations. 
+        """
+        self.agent.w[state] = value
         pass
     
     
