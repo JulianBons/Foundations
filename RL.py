@@ -70,17 +70,16 @@ class ReinforcementLearning:
         return (reward, state, action, termination)
 
     
-    def rl_step(self, reward, last_state, action):
+    def rl_step(self, reward, last_state, last_action):
         """
         Observe the effect of the interaction.
         """
         #Interaction
-        (reward, state, termination) = self.env.env_step(action)
+        (reward, state, termination) = self.env.env_step(last_action)
         
-        
-        ####TO DO#####
-        #Store last_state, action, state in self.memory of agent
-        #Call agent.replay   
+        if self.agent.replay:
+            self.agent.memory[(last_state, last_action)] = (reward, state)
+
         
         action = self.agent.agent_step(reward, state)
         
@@ -178,11 +177,14 @@ class ReinforcementLearning:
         old_epsilon = self.agent.epsilon
         old_reward_states = [utils.ndarray_to_matrix(state, self.env.width) for state in self.env.reward_states]
         old_rewards = self.env.rewards
+        old_replay = self.agent.replay
      
         #Use a random policy
         self.rl_change_epsilon(1)
         #Delete the task
         self.rl_change_task(reward_states=[], rewards=[])
+        #Turn off replay
+        self.agent.replay = False
         
         #Start the interaction
         reward, state, action, _ = self.rl_start()
@@ -190,11 +192,79 @@ class ReinforcementLearning:
         #Explore the maze
         for step in range(num_steps):
             reward, state, action, _ = self.rl_step(reward, state, action)
+            if self.agent.replay:
+                self.agent.memory[(last_state, last_action)] = (reward, state)
+
             
         
         #Reset the parameters
         self.rl_change_epsilon(old_epsilon)
         self.rl_change_task(reward_states=old_reward_states, rewards=old_rewards)
+        self.agent.replay = old_replay
+        
         
         
         pass
+    
+    
+    def learn_offline(self, num_replay_steps):
+        for step in range(num_replay_steps):
+            (last_state, last_action), (reward, state) = random.choice(list(self.agent.memory.items()))
+            self.agent.replay_update(last_state, last_action, reward, state)
+            
+            
+    def confront_with_final_trajectory(self):
+        """
+        Confront agent with change in reward states
+        """
+        terminal_states = self.env.reward_states
+        
+        
+        for i, terminal_state in enumerate(terminal_states):
+            #Get new reward 
+            reward = self.env.rewards[i]
+            
+            #Get adjacent states
+            above = terminal_state+self.env.width
+            right = terminal_state + 1
+            below = terminal_state - self.env.width
+            left = terminal_state - 1
+            
+            
+            for transition in [(above, 2), (right, 3), (below, 0), (left, 1)]:
+                last_state, last_action = transition
+                if transition in self.agent.memory:
+                    (reward, state) = self.agent.memory[transition]
+                    self.agent.replay_update(last_state, last_action, reward, state)
+            
+        pass
+    
+    
+    def confront_with_wall(self, new_wall):
+        above = new_wall+self.env.width
+        right = new_wall + 1
+        below = new_wall - self.env.width
+        left = new_wall - 1
+        
+        if above not in self.env.walls:
+            self.agent.memory[above, 2] = (-1, above)
+            self.agent.replay_forgetting(above, 2, -1, above)
+            
+        if right not in self.env.walls:
+            self.agent.memory[right, 3] = (-1, right)
+            self.agent.replay_forgetting(right, 3, -1, right)
+        
+        if below not in self.env.walls:
+            self.agent.memory[below, 0] = (-1, below)
+            self.agent.replay_forgetting(below, 0, -1, below)
+        
+        if left not in self.env.walls:
+            self.agent.memory[left, 1] = (-1, left)
+            self.agent.replay_forgetting(left, 1, -1, left)
+            
+            
+        pass
+        
+        
+        
+        

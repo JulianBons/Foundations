@@ -32,6 +32,8 @@ class QAgent:
     
         self.q_values = np.zeros((agent_info['num_states'], agent_info['num_actions']))
         
+        self.replay = False
+        
         pass
     
     def agent_start(self, start_state):
@@ -235,6 +237,382 @@ class TemporalDifferenceSuccessor:
         self.num_steps += 1
         
         pass
+    
+    
+    
+    
+    
+class TemporalDifferenceSuccessor_latent:
+    def __init__(self):
+        """
+        Creates an instances of an agent that uses SR.
+        """
+        pass
+    
+    def agent_init(self, agent_info={}):
+        """
+        Initlaizes the SR agent according to the parameters defined in agent_info
+        """
+        #Set up tracking variables
+        self.last_action = None
+        self.last_state = None
+        self.num_steps = 0
+        
+        #Set up task
+        self.num_states = agent_info['num_states']
+        self.num_actions = agent_info['num_actions']
+        
+        #Set up matrices
+        self.Q = np.zeros([self.num_states, self.num_actions])
+        self.M = np.zeros([self.num_states, self.num_states])
+        self.w = np.zeros([self.num_states]) #Reward_vector
+        
+        self.replay = agent_info['replay']
+        
+        if self.replay:
+            self.memory = {} #List of four int tuples, (s, a, r, s')
+            self.num_replay_steps = agent_info['num_replay_steps']
+        
+        
+        #Set Hyperparameter
+        self.step_size = agent_info['step_size']
+        self.discount_factor = agent_info['discount_factor']
+        self.epsilon = agent_info['epsilon']
+        
+        
+    def agent_sample_action(self, state):
+        """
+        Sample action for the given state
+        """
+        if np.random.random()<self.epsilon: #Exploration
+            action = np.random.choice(range(4))
+            
+        else: #Exploitation
+            action = utils.argmax(self.Q[state])
+            
+        return action
+    
+    
+    def agent_update_values(self, reward, state):
+        """
+        Updates the Q-values, reward_vector and the SR
+        """
+        
+        #Compute w
+        delta = reward + self.discount_factor*self.w[state] - self.w[self.last_state]
+        self.w[self.last_state] += self.step_size*delta
+        
+        
+        
+        #Compute the SR-error and update M
+        one_hot = np.zeros(self.num_states)
+        one_hot[self.last_state] = 1
+
+        delta = one_hot + self.discount_factor*self.M[state] - self.M[self.last_state]
+        self.M[self.last_state] += self.step_size*delta
+
+
+        #Update Q-values
+        self.Q[self.last_state][self.last_action] = np.dot(self.M[state], self.w)
+
+        pass
+        
+        
+    
+    def agent_start(self, start_state):
+        """
+        Samples first action for the starting_state
+        """
+        
+        action = self.agent_sample_action(start_state)
+        
+        #Store last state and action
+        self.last_state = start_state
+        self.last_action = action
+        
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        return action
+        
+    
+    def agent_step(self, reward, state):
+        """
+        Sample action in the given state. 
+        Update the SR in the agent.
+        """ 
+        
+        #Update the values
+        self.agent_update_values(reward, state)   
+            
+        #Sample action
+        action = self.agent_sample_action(state)  
+        
+        
+        #Store last state and action
+        self.last_state = state
+        self.last_action = action
+        
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        return action
+        
+    
+    def agent_stop(self, reward, state):
+        """
+        Updates the agent after reaching the final state
+        """
+        
+        self.agent_update_values(reward, state)
+        
+        #Store last_state
+        self.last_state = state
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        pass
+        
+        
+    
+    def start_replay(self):
+        
+        for _ in range(min(self.num_replay_steps, len(self.memory))):
+            index = np.random.choice(len(self.memory))
+            
+            last_state, last_action, reward, state = self.memory[index]
+            
+            self.replay_update(last_state, last_action, reward, state)
+        
+        pass
+
+        
+        
+        
+    def replay_update(self, last_state, last_action, reward, state):
+        """
+        For replay
+        """
+        #Compute w
+        delta = reward + self.discount_factor*self.w[state] - self.w[last_state]
+        self.w[self.last_state] += self.step_size*delta
+        
+        #Compute the SR-error and update M
+        one_hot = np.zeros(self.num_states)
+        one_hot[last_state] = 1
+
+        delta = one_hot + self.discount_factor*self.M[state] - self.M[last_state]
+        self.M[last_state] += self.step_size*delta
+
+
+        #Update Q-values
+        self.Q[last_state][last_action] = np.dot(self.M[state], self.w)
+        
+        pass
+
+
+        
+        
+        
+    
+    
+    
+    
+class TemporalDifferenceSuccessor_tasks:
+    def __init__(self):
+        """
+        Creates an instances of an agent that uses SR.
+        """
+        pass
+    
+    def agent_init(self, agent_info={}):
+        """
+        Initlaizes the SR agent according to the parameters defined in agent_info
+        """
+        #Set up tracking variables
+        self.last_action = None
+        self.last_state = None
+        self.num_steps = 0
+        
+        #Set up task
+        self.num_states = agent_info['num_states']
+        self.num_actions = agent_info['num_actions']
+        
+        #Set up matrices
+        self.Q = np.zeros([self.num_states, self.num_actions])
+        self.M = np.zeros([self.num_states, self.num_states])
+        self.w = np.zeros([self.num_states]) #Reward_vector
+        
+        self.replay = agent_info['replay']
+        
+        if self.replay:
+            self.memory = {} #List of four int tuples, (s, a, r, s')
+            self.num_replay_steps = agent_info['num_replay_steps']
+        
+        
+        #Set Hyperparameter
+        self.step_size = agent_info['step_size']
+        self.discount_factor = agent_info['discount_factor']
+        self.epsilon = agent_info['epsilon']
+        
+        
+    def agent_sample_action(self, state):
+        """
+        Sample action for the given state
+        """
+        if np.random.random()<self.epsilon: #Exploration
+            action = np.random.choice(range(4))
+            
+        else: #Exploitation
+            action = utils.argmax(self.Q[state])
+            
+        return action
+    
+    
+    def agent_update_values(self, reward, state):
+        """
+        Updates the Q-values, reward_vector and the SR
+        """
+        
+        #Compute w
+        #delta = reward + self.discount_factor*self.w[state] - self.w[self.last_state]
+        #self.w[self.last_state] += self.step_size*delta
+        self.w += reward - self.w
+        
+        
+        #Compute the SR-error and update M
+        one_hot = np.zeros(self.num_states)
+        one_hot[self.last_state] = 1
+
+        delta = one_hot + self.discount_factor*self.M[state] - self.M[self.last_state]
+        self.M[self.last_state] += self.step_size*delta
+
+
+        #Update Q-values
+        self.Q[self.last_state][self.last_action] = np.dot(self.M[state], self.w)
+
+        pass
+        
+        
+    
+    def agent_start(self, start_state):
+        """
+        Samples first action for the starting_state
+        """
+        
+        action = self.agent_sample_action(start_state)
+        
+        #Store last state and action
+        self.last_state = start_state
+        self.last_action = action
+        
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        return action
+        
+    
+    def agent_step(self, reward, state):
+        """
+        Sample action in the given state. 
+        Update the SR in the agent.
+        """ 
+        
+        #Update the values
+        self.agent_update_values(reward, state)   
+            
+        #Sample action
+        action = self.agent_sample_action(state)  
+        
+        
+        #Store last state and action
+        self.last_state = state
+        self.last_action = action
+        
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        return action
+        
+    
+    def agent_stop(self, reward, state):
+        """
+        Updates the agent after reaching the final state
+        """
+        
+        self.agent_update_values(reward, state)
+        
+        #Store last_state
+        self.last_state = state
+        
+        #Update tracking variables
+        self.num_steps += 1
+        
+        pass
+        
+        
+    
+    def start_replay(self):
+        
+        for _ in range(min(self.num_replay_steps, len(self.memory))):
+            index = np.random.choice(len(self.memory))
+            
+            last_state, last_action, reward, state = self.memory[index]
+            
+            self.replay_update(last_state, last_action, reward, state)
+        
+        pass
+
+        
+        
+        
+    def replay_update(self, last_state, last_action, reward, state):
+        """
+        For replay
+        """
+        #Compute w
+        delta = reward + self.discount_factor*self.w[state] - self.w[last_state]
+        self.w[self.last_state] += self.step_size*delta
+        
+        #Compute the SR-error and update M
+        one_hot = np.zeros(self.num_states)
+        one_hot[last_state] = 1
+
+        delta = one_hot + self.discount_factor*self.M[state] - self.M[last_state]
+        self.M[last_state] += self.step_size*delta
+
+
+        #Update Q-values
+        self.Q[last_state][last_action] = np.dot(self.M[state], self.w)
+        
+        pass
+    
+    
+    def replay_forgetting(self, last_state, last_action, reward, state):
+        """
+        For transition reevaluation: 
+        Delete old traces from tansition matrix
+        """
+        delta = reward + self.discount_factor*self.w[state] - self.w[last_state]
+        self.w[self.last_state] += self.step_size*delta
+        
+        one_hot = np.zeros(self.num_states)
+        one_hot[last_state] = -1
+
+        delta = one_hot + self.discount_factor*self.M[state] - self.M[last_state]
+        self.M[last_state] += self.step_size*delta
+
+        self.Q[last_state][last_action] = np.dot(self.M[state], self.w)
+        
+        
+        
+        pass
+    
         
         
         

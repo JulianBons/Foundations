@@ -90,4 +90,4 @@ def plot(size, walls, start_state=None, reward_states=None, current_state=None):
             for loc in reward_states:
                 plt.text(*reversed(loc), "R", ha="center", va="center", color="red", fontsize=20, alpha=0.75)
         
-        plt.show()
+        #plt.show()
